@@ -36,6 +36,9 @@ typedef enum {
 	ATTR_LOG,
 	ATTR_ERROR_HANDLER,
 	ATTR_TYPE_COLUMN,	// for input framework
+    ATTR_LRU,
+    ATTR_SIZE_LIMIT,
+    ATTR_DROP_FUNC,
 	ATTR_TRACKED,	// hidden attribute, tracked by NotifierRegistry
 #define NUM_ATTRS (int(ATTR_TRACKED) + 1)
 } attr_tag;

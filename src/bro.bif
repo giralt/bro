@@ -1251,6 +1251,123 @@ function clear_table%(v: any%): any
 
 	return 0;
 	%}
+	
+## Get the least recently used element in a table
+##
+## v: The table
+function get_lru%(v: any%): any
+	%{
+	TableVal* tv = v->Type()->Tag() == TYPE_TABLE ? v->AsTableVal() : 0;
+	Val* result;
+	
+	if ( !tv )
+		{
+		builtin_error("get_lru() requires a table argument");
+		return new Val(-1, TYPE_INT);
+		}
+	
+	if ( !tv->FindAttr(ATTR_LRU) )
+		{
+		builtin_error("get_lru() requires a table with the &lru attribute set");
+		return new Val(-1, TYPE_INT);
+		}
+		
+	result = tv->OldestVal();
+	if(result == 0)
+	    return new Val(-1, TYPE_INT);
+
+    Ref(result);
+    return result;
+		
+	%}
+	
+## Get the most recently used element in a table
+##
+## v: The table
+function get_mru%(v: any%): any
+	%{
+	TableVal* tv = v->Type()->Tag() == TYPE_TABLE ? v->AsTableVal() : 0;
+	Val* result;
+	
+	if ( !tv )
+		{
+		builtin_error("get_mru() requires a table argument");
+		return new Val(-1, TYPE_INT);
+		}
+	
+	if ( !tv->FindAttr(ATTR_LRU) )
+		{
+		builtin_error("get_mru() requires a table with the &lru attribute set");
+		return new Val(-1, TYPE_INT);
+		}
+		
+	result = tv->NewestVal();
+	if(result == 0)
+	    return new Val(-1, TYPE_INT);
+
+    Ref(result);
+    return result;
+		
+	%}
+	
+## Get the key of the least recently used element in a table
+##
+## v: The table
+function get_lru_key%(v: any%): any
+	%{
+	TableVal* tv = v->Type()->Tag() == TYPE_TABLE ? v->AsTableVal() : 0;
+	Val* result;
+	
+	if ( !tv )
+		{
+		builtin_error("get_lru_key() requires a table argument");
+		return new Val(-1, TYPE_INT);
+		}
+	
+	if ( !tv->FindAttr(ATTR_LRU) )
+		{
+		builtin_error("get_lru_key() requires a table with the &lru attribute set");
+		return new Val(-1, TYPE_INT);
+		}
+		
+	result = tv->OldestKey();
+	if(result == 0)
+	    return new Val(-1, TYPE_INT);
+
+    Ref(result);
+    return result;
+		
+	%}
+	
+## Get the key of the most recently used element in a table
+##
+## v: The table
+function get_mru_key%(v: any%): any
+	%{
+	TableVal* tv = v->Type()->Tag() == TYPE_TABLE ? v->AsTableVal() : 0;
+	Val* result;
+	
+	if ( !tv )
+		{
+		builtin_error("get_mru_key() requires a table argument");
+		return new Val(-1, TYPE_INT);
+		}
+	
+	if ( !tv->FindAttr(ATTR_LRU) )
+		{
+		builtin_error("get_mru_key() requires a table with the &lru attribute set");
+		return new Val(-1, TYPE_INT);
+		}
+		
+	result = tv->NewestKey();
+	if(result == 0)
+	    return new Val(-1, TYPE_INT);
+
+    Ref(result);
+    return result;
+		
+	%}
+	
 
 ## Returns the number of elements in a container. This function works with all
 ## container types, i.e., sets, tables, and vectors.

@@ -709,6 +709,42 @@ protected:
 
 extern double bro_start_network_time;
 
+
+/*
+ * An entry in a doubly-linked list of hash keys.
+ */
+class LRUEntry {
+public:
+    LRUEntry(HashKey *k)
+        {
+        key = k;
+        prev = 0;
+        next = 0;
+        }
+    ~LRUEntry()
+        {
+        Extract();
+        delete key;
+        key = 0;
+        }
+
+    HashKey* GetKey()   { return key; }
+    LRUEntry *Prev() { return prev; }
+    void SetPrev(LRUEntry *p) { prev = p; }
+    LRUEntry *Next() { return next; }
+    void SetNext(LRUEntry *n) { next = n; }
+
+    void Extract();
+    void InsertBefore(LRUEntry* e);
+    void InsertAfter(LRUEntry* e);
+
+private:
+    HashKey* key;
+    LRUEntry* prev;
+    LRUEntry* next;
+};
+
+
 class TableEntryVal {
 public:
 	TableEntryVal(Val* v)
@@ -717,6 +753,7 @@ public:
 		last_access_time = network_time;
 		expire_access_time = last_read_update =
 			int(network_time - bro_start_network_time);
+		lru_entry = 0;
 		}
 	~TableEntryVal()	{ }
 
@@ -737,6 +774,19 @@ public:
 	void SetLastReadUpdate(double time)
 		{ last_read_update = int(time - bro_start_network_time); }
 
+	/*
+	 * LRU extensions
+	 */
+    void SetLRUEntry(LRUEntry *e)
+    {
+        if (lru_entry != 0)
+            {
+             delete lru_entry;
+            }
+        lru_entry = e;
+    }
+    LRUEntry *GetLRUEntry() { return lru_entry; }
+
 protected:
 	friend class TableVal;
 
@@ -748,6 +798,12 @@ protected:
 	// for these anyway.
 	int expire_access_time;
 	int last_read_update;
+
+	/*
+	 * LRU extensions
+	 */
+    LRUEntry* lru_entry;
+
 };
 
 class TableValTimer : public Timer {
@@ -845,6 +901,18 @@ public:
 	HashKey* ComputeHash(const Val* index) const
 		{ return table_hash->ComputeHash(index, 1); }
 
+	/*
+	 * LRU extensions
+	 */
+	// Returns the least recently used value in the table, if any.
+    Val* OldestVal();
+    Val* OldestKey();
+	// Returns the least recently used value in the table, if any.
+    Val* NewestVal();
+    Val* NewestKey();
+	// Deletes the least recently used entry in the table, if any.
+	void DropOldest();
+
 protected:
 	friend class Val;
 	friend class StateAccess;
@@ -866,6 +934,10 @@ protected:
 	// takes ownership of the reference.
 	double CallExpireFunc(Val *idx);
 
+	// Calls &drop_func;
+	// takes ownership of the reference.
+	bool CallDropFunc(Val* key, Val* val);
+
 	// Propagates a read operation if necessary.
 	void ReadOperation(Val* index, TableEntryVal *v);
 
@@ -876,10 +948,31 @@ protected:
 	Attributes* attrs;
 	double expire_time;
 	Expr* expire_expr;
+	Expr* drop_expr;
 	TableValTimer* timer;
 	IterCookie* expire_cookie;
 	PrefixTable* subnets;
 	Val* def_val;
+
+	/*
+	 * LRU extensions
+	 */
+    // If > 0, this is a user-specified size limit to the table.  A size
+    // limit of 0 is nonsensical because the table would always be empty,
+    // and could thus be eliminated.
+    int size_limit;
+    LRUEntry* MRU;  // head of the list
+    LRUEntry* LRU;  // tail -----"-----
+
+    // Remove an LRUEntry from the LRU list and delete it.
+    void RemoveLRUEntry(LRUEntry* e);
+    // Additional LRU-related tasks in some of the TableClass methods
+    void AssignLRU(Val* index, HashKey* k);
+    void LookupLRU(Val* index);
+    void DeleteLRU(const Val* index);
+    void DeleteLRU(const HashKey* k);
+    void RemoveAllLRU();
+
 };
 
 class RecordVal : public MutableVal {

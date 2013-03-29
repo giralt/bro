@@ -1330,10 +1330,136 @@ static void table_entry_val_delete_func(void* val)
 	delete tv;
 	}
 
+// Remove an LRU entry from whatever doubly-linked list it is in,
+// fixing up any neighbors' pointers.
+void LRUEntry::Extract()
+    {
+    if (prev)
+        {
+        prev->next = next;
+        }
+    if (next)
+        {
+        next->prev = prev;
+        }
+    next = 0;
+    prev = 0;
+    }
+
+void LRUEntry::InsertBefore(LRUEntry* e)
+    {
+    prev = 0;
+    if (e->prev)
+        {
+        e->prev->next = this;
+        prev = e->prev;
+        }
+    e->prev = this;
+    next = e;
+    }
+
+void LRUEntry::InsertAfter(LRUEntry* e)
+    {
+    next = 0;
+    if (e->next)
+        {
+        e->next->prev = this;
+        next = e->next;
+        }
+    e->next = this;
+    prev = e;
+    }
+
+
+void TableVal::RemoveLRUEntry(LRUEntry* e)
+    {
+    if (e == this->MRU && e == this->LRU)
+        {
+        // Only element in the list
+        this->MRU = 0;
+        this->LRU = 0;
+        }
+    else if (e == this->MRU)
+        {
+        // Current head of the list
+        this->MRU = e->Next();
+        }
+    else if (e == this->LRU)
+        {
+        // Current tail of the list
+        this->LRU = e->Prev();
+        }
+    delete e;
+    }
+
+
+Val* TableVal::OldestVal()
+    {
+    if (LRU != 0)
+        {
+        TableEntryVal* v = AsTable()->Lookup(LRU->GetKey());
+        return v->Value();
+        }
+
+    return 0;
+    }
+
+
+Val* TableVal::NewestVal()
+    {
+    if (MRU != 0)
+        {
+        return AsTable()->Lookup(MRU->GetKey())->Value();
+        }
+
+    return 0;
+    }
+
+
+Val* TableVal::OldestKey()
+    {
+    if (LRU != 0)
+        {
+        return RecoverIndex(LRU->GetKey());
+        }
+
+    return 0;
+    }
+
+
+Val* TableVal::NewestKey()
+    {
+    if (MRU != 0)
+        {
+        return RecoverIndex(MRU->GetKey());
+        }
+
+    return 0;
+    }
+
+
+void TableVal::DropOldest()
+    {
+    Val* key;
+    Val* val;
+    if (LRU != 0)
+        {
+        key = RecoverIndex(LRU->GetKey());
+        val = AsTable()->Lookup(LRU->GetKey())->Value();
+        if(FindAttr(ATTR_DROP_FUNC))
+            CallDropFunc(key, val);
+        Delete(key);
+        }
+    }
+
+
 TableVal::TableVal(TableType* t, Attributes* a) : MutableVal(t)
 	{
+    size_limit = 0;
 	Init(t);
 	SetAttrs(a);
+	MRU = 0;
+	LRU = 0;
 	}
 
 void TableVal::Init(TableType* t)
@@ -1341,6 +1467,7 @@ void TableVal::Init(TableType* t)
 	::Ref(t);
 	table_type = t;
 	expire_expr = 0;
+	drop_expr = 0;
 	expire_time = 0;
 	expire_cookie = 0;
 	timer = 0;
@@ -1368,10 +1495,15 @@ TableVal::~TableVal()
 	Unref(attrs);
 	Unref(def_val);
 	Unref(expire_expr);
+	Unref(drop_expr);
 	}
 
 void TableVal::RemoveAll()
 	{
+
+    if(FindAttr(ATTR_LRU))
+        RemoveAllLRU();
+
 	// Here we take the brute force approach.
 	delete AsTable();
 	val.table_val = new PDict(TableEntryVal);
@@ -1413,12 +1545,45 @@ void TableVal::SetAttrs(Attributes* a)
 	CheckExpireAttr(ATTR_EXPIRE_WRITE);
 	CheckExpireAttr(ATTR_EXPIRE_CREATE);
 
+	/*
+	 * Check the size_limit attribute
+	 */
+	Attr* sla = attrs->FindAttr(ATTR_SIZE_LIMIT);
+
+	if ( sla )
+        {
+	    Val* sl = sla->AttrExpr()->Eval(0);
+	    if ( ! sl )
+            {
+	        sla->AttrExpr()->Error("value of size_limit not fixed");
+	        return;
+            }
+
+	    size_limit = sl->AsCount();
+        }
+
+	// As network_time is not necessarily initialized yet,
+	// we set a timer which fires immediately.
+	timer = new TableValTimer(this, 1);
+	timer_mgr->Add(timer);
+
 	Attr* ef = attrs->FindAttr(ATTR_EXPIRE_FUNC);
 	if ( ef )
-		{
-		expire_expr = ef->AttrExpr();
-		expire_expr->Ref();
-		}
+        {
+	    expire_expr = ef->AttrExpr();
+	    expire_expr->Ref();
+        }
+
+	/*
+	 * Check the drop_func attribute
+	 */
+	Attr* df = attrs->FindAttr(ATTR_DROP_FUNC);
+	if ( df )
+        {
+	    drop_expr = df->AttrExpr();
+	    drop_expr->Ref();
+        }
+
 	}
 
 void TableVal::CheckExpireAttr(attr_tag at)
@@ -1459,6 +1624,135 @@ int TableVal::Assign(Val* index, Val* new_val, Opcode op)
 	return Assign(index, k, new_val, op);
 	}
 
+void TableVal::AssignLRU(Val* index, HashKey* k)
+    {
+
+    TableEntryVal* val = (TableEntryVal*) AsTable()->Lookup(k);
+    // We call ComputeHash to generate a new key
+    // to be owned by the LRUEntry
+    LRUEntry* new_entry = new LRUEntry(ComputeHash(index));
+    val->SetLRUEntry(new_entry);
+    if (MRU == 0)
+        {
+        // First entry in the table
+        MRU = new_entry;
+        LRU = new_entry;
+        }
+    else
+        {
+        new_entry->InsertBefore(MRU);
+        MRU = new_entry;
+        }
+
+    // If there's a size limit specified, and we just exceeded it by
+    // adding a new value, then drop the oldest element in the table.
+    if (size_limit > 0 && Size() > size_limit)
+        {
+        DropOldest();
+        }
+    return;
+    }
+
+void TableVal::LookupLRU(Val* index)
+    {
+    const PDict(TableEntryVal)* tbl = AsTable();
+    if ( tbl->Length() > 0 )
+        {
+        HashKey* k = ComputeHash(index);
+        if ( k )
+            {
+            TableEntryVal* v = (TableEntryVal*) (AsTable()->Lookup(k));
+            delete k;
+
+            if ( v )
+                {
+                // Move to MRU position
+                LRUEntry *e = v->GetLRUEntry();
+                if(e == 0)
+                    return;
+                if (e == this->LRU && e->Prev())
+                    {
+                    this->LRU = e->Prev();
+                    }
+                e->Extract();
+                e->InsertBefore(this->MRU);
+                this->MRU = e;
+                }
+            }
+        }
+    return;
+    }
+
+
+void TableVal::DeleteLRU(const Val* index)
+    {
+    const PDict(TableEntryVal)* tbl = AsTable();
+    if ( tbl->Length() > 0 )
+        {
+        HashKey* k = ComputeHash(index);
+        if ( k )
+            {
+            TableEntryVal* v = (TableEntryVal*) (AsTable()->Lookup(k));
+            delete k;
+
+            if ( v )
+                {
+                LRUEntry *e = v->GetLRUEntry();
+                RemoveLRUEntry(e);
+                /*
+                if (e == this->MRU && e == this->LRU)
+                    {
+                    this->MRU = 0;
+                    this->LRU = 0;
+                    }
+                else if (e == this->MRU)
+                    {
+                    this->MRU = e->Next();
+                    }
+                else if (e == this->LRU)
+                    {
+                    this->LRU = e->Prev();
+                    }
+                e->Extract();
+                delete e;
+                */
+                }
+            }
+        }
+    return;
+
+    }
+
+
+void TableVal::DeleteLRU(const HashKey* k)
+    {
+    TableEntryVal* v = (TableEntryVal*) (AsTable()->Lookup(k));
+    if ( v )
+        {
+        LRUEntry *e = v->GetLRUEntry();
+        RemoveLRUEntry(e);
+        }
+    return;
+    }
+
+
+void TableVal::RemoveAllLRU(void)
+    {
+    // Delete all of the LRU entries.  This should be more efficient than
+    // repeatedly calling RemoveLRUEntry().
+    LRUEntry* x = MRU;
+    while (x != 0)
+        {
+        LRUEntry* t = x;
+        x = x->Next();
+        delete t;
+        }
+    MRU = 0;
+    LRU = 0;
+    return;
+    }
+
+
 int TableVal::Assign(Val* index, HashKey* k, Val* new_val, Opcode op)
 	{
 	int is_set = table_type->IsSet();
@@ -1480,6 +1774,8 @@ int TableVal::Assign(Val* index, HashKey* k, Val* new_val, Opcode op)
 						this, index, new_val, old));
 			new_val->AsTableVal()->AddTo(old->AsTableVal(), 0, false);
 			Unref(new_val);
+			if(index && FindAttr(ATTR_LRU))
+			    AssignLRU(index, k);
 			return 1;
 			}
 		}
@@ -1560,6 +1856,9 @@ int TableVal::Assign(Val* index, HashKey* k, Val* new_val, Opcode op)
 	// Keep old expiration time if necessary.
 	if ( old_entry_val && attrs && attrs->FindAttr(ATTR_EXPIRE_CREATE) )
 		new_entry_val->SetExpireAccess(old_entry_val->ExpireAccessTime());
+
+    if(index && FindAttr(ATTR_LRU))
+        AssignLRU(index, k);
 
 	delete k;
 	if ( old_entry_val )
@@ -1788,6 +2087,9 @@ Val* TableVal::Lookup(Val* index, bool use_default_val)
 	{
 	static Val* last_default = 0;
 
+    if(index && FindAttr(ATTR_LRU))
+	    LookupLRU(index);
+
 	if ( last_default )
 		{
 		Unref(last_default);
@@ -1879,6 +2181,10 @@ ListVal* TableVal::RecoverIndex(const HashKey* k) const
 Val* TableVal::Delete(const Val* index)
 	{
 	HashKey* k = ComputeHash(index);
+
+    if(k && FindAttr(ATTR_LRU))
+        DeleteLRU(k);
+
 	TableEntryVal* v = k ? AsNonConstTable()->RemoveEntry(k) : 0;
 	Val* va = v ? (v->Value() ? v->Value() : this->Ref()) : 0;
 
@@ -1918,6 +2224,10 @@ Val* TableVal::Delete(const Val* index)
 
 Val* TableVal::Delete(const HashKey* k)
 	{
+
+    if(k && FindAttr(ATTR_LRU))
+        DeleteLRU(k);
+
 	TableEntryVal* v = AsNonConstTable()->RemoveEntry(k);
 	Val* va = v ? (v->Value() ? v->Value() : this->Ref()) : 0;
 
@@ -2251,6 +2561,31 @@ double TableVal::CallExpireFunc(Val* idx)
 
 	return secs;
 	}
+
+bool TableVal::CallDropFunc(Val* key, Val* val)
+    {
+    bool result = true;
+
+    val_list* vl = new val_list;
+    vl->append(Ref());  // passes "this" and Ref()'s it
+    key->Ref();
+    vl->append(key);
+    val->Ref();
+    vl->append(val);
+
+    try
+        {
+        Val* vs = drop_expr->Eval(0)->AsFunc()->Call(vl);
+        Unref(vs);
+        }
+    catch ( InterpreterException& e )
+        {
+        result = false;
+        }
+
+    delete vl;
+    return result;
+    }
 
 void TableVal::ReadOperation(Val* index, TableEntryVal* v)
 	{

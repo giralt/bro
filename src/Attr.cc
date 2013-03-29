@@ -17,7 +17,7 @@ const char* attr_name(attr_tag t)
 		"&persistent", "&synchronized", "&postprocessor",
 		"&encrypt", "&match", "&disable_print_hook",
 		"&raw_output", "&mergeable", "&priority",
-		"&group", "&log", "&error_handler", "&type_column",
+		"&group", "&log", "&error_handler", "&type_column", "&lru", "&size_limit", "&drop_func",
 		"(&tracked)",
 	};
 
@@ -379,6 +379,33 @@ void Attributes::CheckAttr(Attr* a)
 		}
 		break;
 
+    case ATTR_DROP_FUNC:
+        {
+        if ( type->Tag() != TYPE_TABLE )
+            {
+            Error("drop function only applicable to tables");
+            break;
+            }
+
+        const Expr* drop_func = a->AttrExpr();
+        const FuncType* d_ft = drop_func->Type()->AsFuncType();
+
+        if ( ((const BroType*) d_ft)->YieldType()->Tag() != TYPE_COUNT )
+            {
+            Error("&drop_func must yield a value of type count");
+            break;
+            }
+
+        if ( d_ft->Args()->NumFields() != 3 )
+            {
+            Error("&drop_func function must take exactly three arguments");
+            break;
+            }
+
+        // ### Should type-check arguments
+        }
+        break;
+
 	case ATTR_PERSISTENT:
 	case ATTR_SYNCHRONIZED:
 	case ATTR_TRACKED:
@@ -439,6 +466,27 @@ void Attributes::CheckAttr(Attr* a)
 		break;
 		}
 
+	case ATTR_LRU:
+        {
+	    if ( type->Tag() != TYPE_TABLE )
+            {
+	        Error("lru only applicable to tables");
+	        break;
+            }
+
+	    break;
+        }
+
+    case ATTR_SIZE_LIMIT:
+        {
+        if ( type->Tag() != TYPE_TABLE )
+            {
+            Error("size_limit only applicable to tables");
+            break;
+            }
+
+        break;
+        }
 
 	default:
 		BadTag("Attributes::CheckAttr", attr_name(a->Tag()));

@@ -337,6 +337,9 @@ when	return TOK_WHEN;
 &rotate_interval	return TOK_ATTR_ROTATE_INTERVAL;
 &rotate_size		return TOK_ATTR_ROTATE_SIZE;
 &synchronized	return TOK_ATTR_SYNCHRONIZED;
+&lru			return TOK_ATTR_LRU;
+&size_limit		return TOK_ATTR_SIZE_LIMIT;
+&drop_func		return TOK_ATTR_DROP_FUNC;
 &write_expire	return TOK_ATTR_EXPIRE_WRITE;
 
 @DEBUG	return TOK_DEBUG;	// marks input for debugger

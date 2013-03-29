@@ -2,7 +2,7 @@
 // See the file "COPYING" in the main distribution directory for copyright.
 %}
 
-%expect 90
+%expect 99
 
 %token TOK_ADD TOK_ADD_TO TOK_ADDR TOK_ANY
 %token TOK_ATENDIF TOK_ATELSE TOK_ATIF TOK_ATIFDEF TOK_ATIFNDEF
@@ -25,6 +25,9 @@
 %token TOK_ATTR_DISABLE_PRINT_HOOK TOK_ATTR_RAW_OUTPUT TOK_ATTR_MERGEABLE
 %token TOK_ATTR_PRIORITY TOK_ATTR_GROUP TOK_ATTR_LOG TOK_ATTR_ERROR_HANDLER
 %token TOK_ATTR_TYPE_COLUMN
+%token TOK_ATTR_LRU 
+%token TOK_ATTR_SIZE_LIMIT
+%token TOK_ATTR_DROP_FUNC
 
 %token TOK_DEBUG
 
@@ -32,7 +35,7 @@
 
 %token TOK_NO_TEST
 
-%left ',' '|'
+%left ',' '|'f
 %right '=' TOK_ADD_TO TOK_REMOVE_FROM
 %right '?' ':'
 %left TOK_OR
@@ -1309,6 +1312,12 @@ attr:
 			{ $$ = new Attr(ATTR_GROUP, $3); }
 	|	TOK_ATTR_TYPE_COLUMN '=' expr
 			{ $$ = new Attr(ATTR_TYPE_COLUMN, $3); }
+	|	TOK_ATTR_LRU
+			{ $$ = new Attr(ATTR_LRU); }
+	|	TOK_ATTR_SIZE_LIMIT '=' expr
+			{ $$ = new Attr(ATTR_SIZE_LIMIT, $3); }	
+	|	TOK_ATTR_DROP_FUNC '=' expr
+			{ $$ = new Attr(ATTR_DROP_FUNC, $3); }
 	|	TOK_ATTR_LOG
 			{ $$ = new Attr(ATTR_LOG); }
 	|	TOK_ATTR_ERROR_HANDLER
