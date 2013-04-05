@@ -383,7 +383,7 @@ void Attributes::CheckAttr(Attr* a)
         {
         if ( type->Tag() != TYPE_TABLE )
             {
-            Error("drop function only applicable to tables");
+            Error("&drop_func only applicable to tables");
             break;
             }
 
@@ -470,7 +470,7 @@ void Attributes::CheckAttr(Attr* a)
         {
 	    if ( type->Tag() != TYPE_TABLE )
             {
-	        Error("lru only applicable to tables");
+	        Error("&lru only applicable to tables");
 	        break;
             }
 
@@ -481,7 +481,7 @@ void Attributes::CheckAttr(Attr* a)
         {
         if ( type->Tag() != TYPE_TABLE )
             {
-            Error("size_limit only applicable to tables");
+            Error("&size_limit only applicable to tables");
             break;
             }
 

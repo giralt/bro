@@ -777,15 +777,15 @@ public:
 	/*
 	 * LRU extensions
 	 */
-    void SetLRUEntry(LRUEntry *e)
-    {
-        if (lru_entry != 0)
-            {
-             delete lru_entry;
-            }
-        lru_entry = e;
-    }
-    LRUEntry *GetLRUEntry() { return lru_entry; }
+	void SetLRUEntry(LRUEntry *e)
+		{
+		if (lru_entry != 0)
+			{
+			delete lru_entry;
+			}
+		lru_entry = e;
+		}
+	LRUEntry *GetLRUEntry() { return lru_entry; }
 
 protected:
 	friend class TableVal;
@@ -802,7 +802,7 @@ protected:
 	/*
 	 * LRU extensions
 	 */
-    LRUEntry* lru_entry;
+	LRUEntry* lru_entry;
 
 };
 
@@ -905,11 +905,11 @@ public:
 	 * LRU extensions
 	 */
 	// Returns the least recently used value in the table, if any.
-    Val* OldestVal();
-    Val* OldestKey();
-	// Returns the least recently used value in the table, if any.
-    Val* NewestVal();
-    Val* NewestKey();
+	Val* OldestVal();
+	Val* OldestKey();
+	// Returns the most recently used value in the table, if any.
+	Val* NewestVal();
+	Val* NewestKey();
 	// Deletes the least recently used entry in the table, if any.
 	void DropOldest();
 
@@ -957,21 +957,21 @@ protected:
 	/*
 	 * LRU extensions
 	 */
-    // If > 0, this is a user-specified size limit to the table.  A size
-    // limit of 0 is nonsensical because the table would always be empty,
-    // and could thus be eliminated.
-    int size_limit;
-    LRUEntry* MRU;  // head of the list
-    LRUEntry* LRU;  // tail -----"-----
+	// If > 0, this is a user-specified size limit to the table.  A size
+	// limit of 0 is nonsensical because the table would always be empty,
+	// and could thus be eliminated.
+	int size_limit;
+	LRUEntry* MRU;  // head of the list
+	LRUEntry* LRU;  // tail -----"-----
 
-    // Remove an LRUEntry from the LRU list and delete it.
-    void RemoveLRUEntry(LRUEntry* e);
-    // Additional LRU-related tasks in some of the TableClass methods
-    void AssignLRU(Val* index, HashKey* k);
-    void LookupLRU(Val* index);
-    void DeleteLRU(const Val* index);
-    void DeleteLRU(const HashKey* k);
-    void RemoveAllLRU();
+	// Remove an LRUEntry from the LRU list and delete it.
+	void RemoveLRUEntry(LRUEntry* e);
+	// Additional LRU-related tasks in some of the TableClass methods
+	void AssignLRU(Val* index, HashKey* k);
+	void LookupLRU(Val* index);
+	void DeleteLRU(const Val* index);
+	void DeleteLRU(const HashKey* k);
+	void RemoveAllLRU();
 
 };
 

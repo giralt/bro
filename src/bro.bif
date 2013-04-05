@@ -1274,10 +1274,10 @@ function get_lru%(v: any%): any
 		
 	result = tv->OldestVal();
 	if(result == 0)
-	    return new Val(-1, TYPE_INT);
+		return new Val(-1, TYPE_INT);
 
-    Ref(result);
-    return result;
+	Ref(result);
+	return result;
 		
 	%}
 	
@@ -1303,10 +1303,10 @@ function get_mru%(v: any%): any
 		
 	result = tv->NewestVal();
 	if(result == 0)
-	    return new Val(-1, TYPE_INT);
+		return new Val(-1, TYPE_INT);
 
-    Ref(result);
-    return result;
+	Ref(result);
+	return result;
 		
 	%}
 	
@@ -1332,10 +1332,10 @@ function get_lru_key%(v: any%): any
 		
 	result = tv->OldestKey();
 	if(result == 0)
-	    return new Val(-1, TYPE_INT);
+		return new Val(-1, TYPE_INT);
 
-    Ref(result);
-    return result;
+	Ref(result);
+	return result;
 		
 	%}
 	
@@ -1361,10 +1361,10 @@ function get_mru_key%(v: any%): any
 		
 	result = tv->NewestKey();
 	if(result == 0)
-	    return new Val(-1, TYPE_INT);
+		return new Val(-1, TYPE_INT);
 
-    Ref(result);
-    return result;
+	Ref(result);
+	return result;
 		
 	%}
 	

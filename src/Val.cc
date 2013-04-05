@@ -1455,7 +1455,7 @@ void TableVal::DropOldest()
 
 TableVal::TableVal(TableType* t, Attributes* a) : MutableVal(t)
 	{
-    size_limit = 0;
+	size_limit = 0;
 	Init(t);
 	SetAttrs(a);
 	MRU = 0;
@@ -1569,20 +1569,20 @@ void TableVal::SetAttrs(Attributes* a)
 
 	Attr* ef = attrs->FindAttr(ATTR_EXPIRE_FUNC);
 	if ( ef )
-        {
-	    expire_expr = ef->AttrExpr();
-	    expire_expr->Ref();
-        }
+		{
+		expire_expr = ef->AttrExpr();
+		expire_expr->Ref();
+		}
 
 	/*
 	 * Check the drop_func attribute
 	 */
 	Attr* df = attrs->FindAttr(ATTR_DROP_FUNC);
 	if ( df )
-        {
-	    drop_expr = df->AttrExpr();
-	    drop_expr->Ref();
-        }
+		{
+		drop_expr = df->AttrExpr();
+		drop_expr->Ref();
+		}
 
 	}
 
@@ -1775,7 +1775,7 @@ int TableVal::Assign(Val* index, HashKey* k, Val* new_val, Opcode op)
 			new_val->AsTableVal()->AddTo(old->AsTableVal(), 0, false);
 			Unref(new_val);
 			if(index && FindAttr(ATTR_LRU))
-			    AssignLRU(index, k);
+				AssignLRU(index, k);
 			return 1;
 			}
 		}
@@ -1857,8 +1857,8 @@ int TableVal::Assign(Val* index, HashKey* k, Val* new_val, Opcode op)
 	if ( old_entry_val && attrs && attrs->FindAttr(ATTR_EXPIRE_CREATE) )
 		new_entry_val->SetExpireAccess(old_entry_val->ExpireAccessTime());
 
-    if(index && FindAttr(ATTR_LRU))
-        AssignLRU(index, k);
+	if(index && FindAttr(ATTR_LRU))
+		AssignLRU(index, k);
 
 	delete k;
 	if ( old_entry_val )
@@ -2182,8 +2182,8 @@ Val* TableVal::Delete(const Val* index)
 	{
 	HashKey* k = ComputeHash(index);
 
-    if(k && FindAttr(ATTR_LRU))
-        DeleteLRU(k);
+	if(k && FindAttr(ATTR_LRU))
+		DeleteLRU(k);
 
 	TableEntryVal* v = k ? AsNonConstTable()->RemoveEntry(k) : 0;
 	Val* va = v ? (v->Value() ? v->Value() : this->Ref()) : 0;
@@ -2225,8 +2225,8 @@ Val* TableVal::Delete(const Val* index)
 Val* TableVal::Delete(const HashKey* k)
 	{
 
-    if(k && FindAttr(ATTR_LRU))
-        DeleteLRU(k);
+	if(k && FindAttr(ATTR_LRU))
+		DeleteLRU(k);
 
 	TableEntryVal* v = AsNonConstTable()->RemoveEntry(k);
 	Val* va = v ? (v->Value() ? v->Value() : this->Ref()) : 0;
