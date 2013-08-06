@@ -35,7 +35,7 @@
 
 %token TOK_NO_TEST
 
-%left ',' '|'f
+%left ',' '|'
 %right '=' TOK_ADD_TO TOK_REMOVE_FROM
 %right '?' ':'
 %left TOK_OR

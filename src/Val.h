@@ -715,33 +715,33 @@ extern double bro_start_network_time;
  */
 class LRUEntry {
 public:
-    LRUEntry(HashKey *k)
-        {
-        key = k;
-        prev = 0;
-        next = 0;
-        }
-    ~LRUEntry()
-        {
-        Extract();
-        delete key;
-        key = 0;
-        }
+	LRUEntry(HashKey *k)
+		{
+		key = k;
+		prev = 0;
+		next = 0;
+		}
+	~LRUEntry()
+		{
+		Extract();
+		delete key;
+		key = 0;
+		}
 
-    HashKey* GetKey()   { return key; }
-    LRUEntry *Prev() { return prev; }
-    void SetPrev(LRUEntry *p) { prev = p; }
-    LRUEntry *Next() { return next; }
-    void SetNext(LRUEntry *n) { next = n; }
+	HashKey* GetKey()   { return key; }
+	LRUEntry *Prev() { return prev; }
+	void SetPrev(LRUEntry *p) { prev = p; }
+	LRUEntry *Next() { return next; }
+	void SetNext(LRUEntry *n) { next = n; }
 
-    void Extract();
-    void InsertBefore(LRUEntry* e);
-    void InsertAfter(LRUEntry* e);
+	void Extract();
+	void InsertBefore(LRUEntry* e);
+	void InsertAfter(LRUEntry* e);
 
 private:
-    HashKey* key;
-    LRUEntry* prev;
-    LRUEntry* next;
+	HashKey* key;
+	LRUEntry* prev;
+	LRUEntry* next;
 };
 
 
@@ -778,13 +778,13 @@ public:
 	 * LRU extensions
 	 */
 	void SetLRUEntry(LRUEntry *e)
-		{
+	{
 		if (lru_entry != 0)
 			{
 			delete lru_entry;
 			}
 		lru_entry = e;
-		}
+	}
 	LRUEntry *GetLRUEntry() { return lru_entry; }
 
 protected:
@@ -969,7 +969,7 @@ protected:
 	// Additional LRU-related tasks in some of the TableClass methods
 	void AssignLRU(Val* index, HashKey* k);
 	void LookupLRU(Val* index);
-	void DeleteLRU(const Val* index);
+	void DeleteLRU(Val* index);
 	void DeleteLRU(const HashKey* k);
 	void RemoveAllLRU();
 
